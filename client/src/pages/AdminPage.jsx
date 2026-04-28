@@ -3,7 +3,7 @@ import { AdminContext } from "../App.jsx";
 import { getAdminVoters,
   getElections, createElection, toggleElection, deleteElection,
   getPosts, createPost, deletePost,
-  createCandidate, deleteCandidate,
+  createCandidate, deleteCandidate, deleteVoter,
 } from "../api.jsx";
 
 
@@ -30,6 +30,12 @@ export default function AdminPage() {
     setElections(els);
     setVoters(vts);
     setLoading(false);
+  }
+
+  async function handleDeleteVoter(id) {
+    if (!window.confirm('Delete this voter and all their votes?')) return;
+    await deleteVoter(id);
+    setVoters(prev => prev.filter(v => v.id !== id));
   }
 
   async function loadPosts(electionId) {
@@ -153,6 +159,7 @@ export default function AdminPage() {
                     <th style={{ textAlign:"left", padding:"6px 8px", color:"var(--text2)", fontWeight:500 }}>Phone</th>
                     <th style={{ textAlign:"left", padding:"6px 8px", color:"var(--text2)", fontWeight:500 }}>Votes cast</th>
                     <th style={{ textAlign:"left", padding:"6px 8px", color:"var(--text2)", fontWeight:500 }}>Registered</th>
+                    <th style={{ padding:"6px 8px" }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -164,6 +171,9 @@ export default function AdminPage() {
                       </td>
                       <td style={{ padding:"8px" }}>{v.voteCount}</td>
                       <td style={{ padding:"8px", color:"var(--text3)" }}>{new Date(v.registeredAt).toLocaleDateString()}</td>
+                      <td style={{ padding:"8px" }}>
+                        <button className="btn btn-danger-ghost btn-sm" onClick={() => handleDeleteVoter(v.id)}>Delete</button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

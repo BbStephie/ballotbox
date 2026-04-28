@@ -309,6 +309,17 @@ app.get("/api/admin/voters", requireAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.delete("/api/admin/voters/:id", requireAdmin, async (req, res) => {
+  try {
+    const voter = await Voter.findById(req.params.id);
+    if (!voter) return res.status(404).json({ error: "Voter not found" });
+    // Delete their votes too
+    await Vote.deleteMany({ phone: voter.phone });
+    await Voter.findByIdAndDelete(req.params.id);
+    res.json({ message: "Voter deleted" });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ─── Start ─────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));

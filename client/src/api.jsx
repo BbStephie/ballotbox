@@ -41,3 +41,5 @@ export const deletePost = (postId) => axios.delete(`${BASE}/posts/${postId}`, { 
 export const createCandidate = (postId, data) => axios.post(`${BASE}/posts/${postId}/candidates`, data, { headers: adminHeaders() }).then(r => r.data);
 export const deleteCandidate = (id) => axios.delete(`${BASE}/candidates/${id}`, { headers: adminHeaders() }).then(r => r.data);
 export const getAdminVoters = () => axios.get(`${BASE}/admin/voters`, { headers: adminHeaders() }).then(r => r.data);
+
+export const deleteVoter = (id) => axios.delete(`${BASE}/admin/voters/${id}`, { headers: adminHeaders() }).then(r => r.data);
