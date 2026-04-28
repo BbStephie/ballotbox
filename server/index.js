@@ -14,6 +14,7 @@ app.use(express.json());
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+const ADMIN_NAME = (process.env.ADMIN_NAME || "").trim().toLowerCase();
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/ballotbox";
 const activeSessions = new Set();
 
@@ -42,14 +43,47 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+// ─── Brute force protection ────────────────────────────────────────────────────
+const loginAttempts = new Map();
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const entry = loginAttempts.get(ip) || { count: 0, lockedUntil: 0 };
+  if (entry.lockedUntil > now) {
+    const secs = Math.ceil((entry.lockedUntil - now) / 1000);
+    return `Too many failed attempts. Try again in ${secs} seconds.`;
+  }
+  return null;
+}
+
+function recordFail(ip) {
+  const entry = loginAttempts.get(ip) || { count: 0, lockedUntil: 0 };
+  entry.count += 1;
+  if (entry.count >= 5) { entry.lockedUntil = Date.now() + 15 * 60 * 1000; entry.count = 0; }
+  loginAttempts.set(ip, entry);
+}
+
 // ─── Admin auth ────────────────────────────────────────────────────────────────
 
 app.post("/api/admin/login", async (req, res) => {
   try {
+    const ip = req.ip || "unknown";
     const { name, password } = req.body;
+
+    const rateLimitMsg = checkRateLimit(ip);
+    if (rateLimitMsg) return res.status(429).json({ error: rateLimitMsg });
+
     if (!name?.trim()) return res.status(400).json({ error: "Name is required" });
     if (!password) return res.status(400).json({ error: "Password is required" });
-    if (password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Incorrect password" });
+
+    // Check both name and password — both must match exactly
+    const nameMatch = !ADMIN_NAME || name.trim().toLowerCase() === ADMIN_NAME;
+    if (!nameMatch || password !== ADMIN_PASSWORD) {
+      recordFail(ip);
+      return res.status(401).json({ error: "Incorrect name or password" });
+    }
+
+    loginAttempts.delete(ip);
 
     let admin = await Admin.findOne({ name: name.trim() });
     if (!admin) admin = await Admin.create({ name: name.trim() });
@@ -61,6 +95,7 @@ app.post("/api/admin/login", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 app.post("/api/admin/logout", requireAdmin, (req, res) => {
   activeSessions.delete(req.headers["x-admin-token"]);
@@ -85,7 +120,7 @@ app.post("/api/voters/register", async (req, res) => {
     if (!phone?.trim()) return res.status(400).json({ error: "Phone number is required" });
 
     const normalized = normalizePhone(phone.trim());
-    if (normalized.length < 9) return res.status(400).json({ error: "Enter a valid Cameroonian phone number" });
+    if (normalized.length !== 12) return res.status(400).json({ error: "Enter a valid Cameroonian phone number (e.g. +237 6XX XXX XXX)" });
 
     const existing = await Voter.findOne({ phone: normalized });
     if (existing) return res.json({ voter: toJSON(existing), isNew: false });

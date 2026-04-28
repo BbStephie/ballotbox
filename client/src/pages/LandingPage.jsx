@@ -11,10 +11,16 @@ export default function LandingPage() {
   const [returning, setReturning] = useState(null);
 
   function handlePhoneInput(val) {
-    // Only allow digits, max 8 digits after +237
-    const digits = val.replace(/\D/g, "").slice(0, 8);
+    // Only digits, max 9 digits (Cameroon: 6XXXXXXXX or 2XXXXXXXX)
+    const digits = val.replace(/\D/g, "").slice(0, 9);
     setPhone(digits);
     setError("");
+  }
+
+  function validatePhone(digits) {
+    if (digits.length !== 9) return "Phone number must be 9 digits e.g. 6XXXXXXXX";
+    if (!["6", "2"].includes(digits[0])) return "Number must start with 6 or 2";
+    return null;
   }
 
   async function handleSubmit(e) {
@@ -22,8 +28,8 @@ export default function LandingPage() {
     setError("");
     if (!name.trim() || name.trim().length < 2)
       return setError("Please enter your full name.");
-    if (phone.length < 8)
-      return setError("Please enter a valid 8-digit phone number.");
+    const phoneError = validatePhone(phone);
+    if (phoneError) return setError(phoneError);
 
     const fullPhone = "237" + phone;
     setLoading(true);
@@ -42,8 +48,13 @@ export default function LandingPage() {
     }
   }
 
-  function continueAsReturning() {
-    loginVoter(returning);
+  function continueAsReturning() { loginVoter(returning); }
+
+  // Format display: 6XX XXX XXX
+  function formatDisplay(digits) {
+    if (!digits) return "";
+    const d = digits.padEnd(9, " ");
+    return `${d.slice(0,3)} ${d.slice(3,6)} ${d.slice(6,9)}`.trimEnd();
   }
 
   return (
@@ -85,14 +96,14 @@ export default function LandingPage() {
                   className="form-input phone-input"
                   type="tel"
                   inputMode="numeric"
-                  placeholder="6XXXXXXX"
+                  placeholder="6XX XXX XXX"
                   value={phone}
                   onChange={e => handlePhoneInput(e.target.value)}
-                  maxLength={8}
+                  maxLength={9}
                 />
               </div>
               <p style={{ fontSize:"0.75rem", color:"var(--text3)", marginTop:5 }}>
-                Your phone number identifies you uniquely — you can only vote once per election.
+                Format: +237 6XX XXX XXX — used to identify you uniquely.
               </p>
             </div>
 
