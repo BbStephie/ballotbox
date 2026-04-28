@@ -324,7 +324,7 @@ export default function AdminPage() {
                 <button className="btn btn-secondary btn-sm" onClick={() => handleToggle(el.id)}>
                   {el.isOpen ? "Close voting" : "Open voting"}
                 </button>
-                <a href={`/results/${el.id}`} className="btn btn-secondary btn-sm">Results</a>
+                <button className="btn btn-secondary btn-sm" onClick={() => handleViewResults(el)}>Results</button>
                 <button className="btn btn-danger-ghost btn-sm" onClick={() => handleDeleteElection(el.id)}>Delete</button>
               </div>
             </div>
