@@ -3,7 +3,7 @@ import { AdminContext } from "../App.jsx";
 import { getAdminVoters,
   getElections, createElection, toggleElection, deleteElection,
   getPosts, createPost, deletePost,
-  createCandidate, deleteCandidate, deleteVoter,
+  createCandidate, deleteCandidate, deleteVoter, getResults,
 } from "../api.jsx";
 
 
@@ -19,6 +19,7 @@ export default function AdminPage() {
   // New post form: { title, candidates: ["","",""] }
   const [postForm, setPostForm] = useState({ title: "", candidates: ["", ""] });
   const [showPostForm, setShowPostForm] = useState(null); // electionId
+  const [resultsModal, setResultsModal] = useState(null); // { election, data }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -36,6 +37,11 @@ export default function AdminPage() {
     if (!window.confirm('Delete this voter and all their votes?')) return;
     await deleteVoter(id);
     setVoters(prev => prev.filter(v => v.id !== id));
+  }
+
+  async function handleViewResults(el) {
+    const data = await getResults(el.id);
+    setResultsModal({ election: el, data });
   }
 
   async function loadPosts(electionId) {
@@ -145,6 +151,54 @@ export default function AdminPage() {
           </div>
         </div>
 
+
+        {/* Results modal */}
+        {resultsModal && (
+          <div className="modal-overlay" onClick={() => setResultsModal(null)}>
+            <div className="modal" style={{ maxWidth:620, maxHeight:"80vh", overflowY:"auto" }} onClick={e => e.stopPropagation()}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"1.25rem" }}>
+                <h2 style={{ margin:0 }}>{resultsModal.election.title}</h2>
+                <button className="btn btn-ghost btn-sm" onClick={() => setResultsModal(null)}>✕ Close</button>
+              </div>
+
+              <div style={{ display:"flex", gap:10, marginBottom:"1.25rem" }}>
+                <div className="stat-card" style={{ flex:1 }}>
+                  <div className="val">{resultsModal.data.totalVoters}</div>
+                  <div className="lbl">Total voters</div>
+                </div>
+                <div className="stat-card" style={{ flex:1 }}>
+                  <div className="val">{resultsModal.data.results.length}</div>
+                  <div className="lbl">Posts</div>
+                </div>
+              </div>
+
+              {resultsModal.data.results.length === 0 ? (
+                <p style={{ color:"var(--text3)", textAlign:"center", padding:"1.5rem" }}>No votes yet.</p>
+              ) : resultsModal.data.results.map(({ post, candidates, totalVotes }) => (
+                <div key={post.id} style={{ marginBottom:"1.25rem", background:"var(--bg)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"1rem" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:"0.75rem" }}>
+                    <span style={{ fontWeight:600 }}>{post.title}</span>
+                    <span className="badge badge-gray">{totalVotes} vote{totalVotes !== 1 ? "s" : ""}</span>
+                  </div>
+                  {candidates.map((c, i) => (
+                    <div key={c.id} style={{ marginBottom:10 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", fontSize:"0.875rem", marginBottom:4 }}>
+                        <span style={{ fontWeight:500 }}>
+                          {c.name}
+                          {i === 0 && c.votes > 0 && <span className="badge badge-gold" style={{ marginLeft:8, fontSize:"0.7rem" }}>Leading</span>}
+                        </span>
+                        <span style={{ color:"var(--text2)" }}>{c.votes} · {c.percentage}%</span>
+                      </div>
+                      <div style={{ height:8, background:"var(--surface2)", borderRadius:99, overflow:"hidden" }}>
+                        <div style={{ height:"100%", width:c.percentage+"%", background: i===0 && c.votes>0 ? "#c09a3a" : "var(--accent)", borderRadius:99, transition:"width 0.4s" }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {/* Voters panel */}
         {showVoters && (
           <div className="card" style={{ marginBottom:"1.5rem" }}>
